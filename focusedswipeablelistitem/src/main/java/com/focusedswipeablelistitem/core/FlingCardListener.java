@@ -3,6 +3,7 @@ package com.focusedswipeablelistitem.core;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.PointF;
 import android.graphics.RectF;
@@ -14,6 +15,9 @@ import android.view.ViewGroup;
 import android.view.ViewPropertyAnimator;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
+
+import com.focusedswipeablelistitem.api.ClickListener;
+import com.focusedswipeablelistitem.api.FlingListener;
 
 import androidx.annotation.Nullable;
 
@@ -51,6 +55,7 @@ class FlingCardListener implements View.OnTouchListener {
     private final int parentHeight;
 
     private final FlingListener mFlingListener;
+    private ClickListener clickListener;
     private final Object dataObject;
     private final float halfWidth;
     private final float halfHeight;
@@ -86,7 +91,8 @@ class FlingCardListener implements View.OnTouchListener {
     public static final int BOTTOM = 3;
 
     private ViewPropertyAnimator animator;
-    private int DIRECTION_THRESHOLD;
+    private int X_DIRECTION_THRESHOLD;
+    private int Y_DIRECTION_THRESHOLD;
     private long pressStartTime;
 
 
@@ -96,14 +102,15 @@ class FlingCardListener implements View.OnTouchListener {
     private RectF rightRect;
 
 
-    public FlingCardListener(View frame, Object itemAtPosition, FlingListener flingListener) {
-        this(frame, itemAtPosition, 15f, flingListener);
+    public FlingCardListener(View frame, Object itemAtPosition, FlingListener flingListener, ClickListener clickListener) {
+        this(frame, itemAtPosition, 15f, flingListener, clickListener);
     }
 
     public FlingCardListener(View frame,
                              Object itemAtPosition,
                              float rotation_degrees,
-                             @Nullable FlingListener flingListener) {
+                             @Nullable FlingListener flingListener,
+                             @Nullable ClickListener clickListener) {
         super();
         this.frame = frame;
         this.objectX = frame.getX();
@@ -117,6 +124,7 @@ class FlingCardListener implements View.OnTouchListener {
         this.parentHeight = ((ViewGroup) frame.getParent()).getHeight();
         this.BASE_ROTATION_DEGREES = rotation_degrees;
         this.mFlingListener = flingListener;
+        this.clickListener = clickListener;
 
         mVelocityTracker = VelocityTracker.obtain();
 
@@ -127,15 +135,16 @@ class FlingCardListener implements View.OnTouchListener {
         mMaximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
         mMinimumVelocity = ViewConfiguration.get(context).getScaledMinimumFlingVelocity();
 
-        DIRECTION_THRESHOLD = mTouchSlop * 2;
+        X_DIRECTION_THRESHOLD = mTouchSlop * 2;
     }
 
-
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
     public boolean onTouch(View view, MotionEvent event) {
 
         switch (event.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
-//                pressStartTime = System.currentTimeMillis();
+                pressStartTime = System.currentTimeMillis();
 
                 // from http://android-developers.blogspot.com/2010/06/making-sense-of-multitouch.html
                 // Save the ID of this pointer
@@ -239,39 +248,61 @@ class FlingCardListener implements View.OnTouchListener {
                     float rawPointerY = event.getRawY();
 
                     if (bottomRect.contains((int) rawPointerX, (int) rawPointerY)) {
-                        if (mFlingListener != null) {
-                            mFlingListener.onClick(dataObject, BOTTOM);
+                        if (clickListener != null) {
+                            clickListener.onClick(dataObject, BOTTOM);
                         }
                     } else if (topRect.contains((int) rawPointerX, (int) rawPointerY)) {
-                        if (mFlingListener != null) {
-                            mFlingListener.onClick(dataObject, TOP);
+                        if (clickListener != null) {
+                            clickListener.onClick(dataObject, TOP);
                         }
                     } else {
                         if (leftRect.contains((int) rawPointerX, (int) rawPointerY)) {
-                            if (mFlingListener != null) {
-                                mFlingListener.onClick(dataObject, LEFT);
+                            if (clickListener != null) {
+                                clickListener.onClick(dataObject, LEFT);
                             }
                         } else if (rightRect.contains((int) rawPointerX, (int) rawPointerY)) {
-                            if (mFlingListener != null) {
-                                mFlingListener.onClick(dataObject, RIGHT);
+                            if (clickListener != null) {
+                                clickListener.onClick(dataObject, RIGHT);
                             }
                         }
                     }
-                    resetCardViewOnStack();
+                    resetCardViewOnStackOrRemoveIt();
                 } else {
                     if (Math.abs(velocityX) > mMinimumVelocity || Math.abs(velocityY) > mMinimumVelocity) {
-                        if (Math.abs(traveledDistanceOnX) >= DIRECTION_THRESHOLD) {
-                            final float direction = traveledDistanceOnX < 0 ? RIGHT : LEFT;
-                            if (direction == RIGHT) {
-                                selectRightToDirection();
-                            } else {
-                                selectLeftToDirection();
+                        switch (onFlingDirection(aDownTouchX, xMove, aDownTouchY, yMove)) {
+                            case up:
+                                if (Math.abs(traveledDistanceOnY) >= Y_DIRECTION_THRESHOLD) {
+                                    selectTop();
+                                } else {
+                                    resetCardViewOnStackOrRemoveIt();
+                                }
+                                break;
+                            case down:
+                                if (Math.abs(traveledDistanceOnY) >= Y_DIRECTION_THRESHOLD) {
+                                    selectBottom();
+                                } else {
+                                    resetCardViewOnStackOrRemoveIt();
+                                }
+                                break;
+                            case left:
+                                if (Math.abs(traveledDistanceOnX) >= X_DIRECTION_THRESHOLD) {
+                                    selectLeftToDirection();
+                                } else {
+                                    resetCardViewOnStackOrRemoveIt();
+                                }
+                                break;
+                            case right:
+                                if (Math.abs(traveledDistanceOnX) >= X_DIRECTION_THRESHOLD) {
+                                    selectRightToDirection();
+                                } else {
+                                    resetCardViewOnStackOrRemoveIt();
+                                }
+                            default: {
+                                resetCardViewOnStackOrRemoveIt();
                             }
-                        } else {
-                            resetCardViewOnStack();
                         }
                     } else {
-                        resetCardViewOnStack();
+                        resetCardViewOnStackOrRemoveIt();
                     }
                 }
 
@@ -339,7 +370,7 @@ class FlingCardListener implements View.OnTouchListener {
 
                 frame.setRotation(rotation);
                 if (mFlingListener != null) {
-                    mFlingListener.onScroll(getScrollProgressPercent());
+                    mFlingListener.onScroll(getScrollProgressPercentX(), getScrollProgressPercentY());
                 }
                 break;
 
@@ -352,12 +383,125 @@ class FlingCardListener implements View.OnTouchListener {
                     mDragging = false;
                     abortFlingAnimation();
                 }
-
+                resetCardViewOnStackOrRemoveIt();
                 break;
             }
         }
 
         return true;
+    }
+
+
+    /**
+     * https://stackoverflow.com/a/26387629/3991044
+     *
+     * @param x1
+     * @param x2
+     * @param y1
+     * @param y2
+     * @return
+     */
+    private Direction onFlingDirection(float x1, float x2, float y1, float y2) {
+        // Grab two events located on the plane at e1=(x1, y1) and e2=(x2, y2)
+        // Let e1 be the initial event
+        // e2 can be located at 4 different positions, consider the following diagram
+        // (Assume that lines are separated by 90 degrees.)
+        //
+        //
+        //         \ A  /
+        //          \  /
+        //       D   e1   B
+        //          /  \
+        //         / C  \
+        //
+        // So if (x2,y2) falls in region:
+        //  A => it's an UP swipe
+        //  B => it's a RIGHT swipe
+        //  C => it's a DOWN swipe
+        //  D => it's a LEFT swipe
+        //
+        return getDirection(x1, y1, x2, y2);
+    }
+
+
+    /**
+     * Given two points in the plane p1=(x1, x2) and p2=(y1, y1), this method
+     * returns the direction that an arrow pointing from p1 to p2 would have.
+     *
+     * @param x1 the x position of the first point
+     * @param y1 the y position of the first point
+     * @param x2 the x position of the second point
+     * @param y2 the y position of the second point
+     * @return the direction
+     */
+    public Direction getDirection(float x1, float y1, float x2, float y2) {
+        double angle = getAngle(x1, y1, x2, y2);
+        return Direction.fromAngle(angle);
+    }
+
+    /**
+     * Finds the angle between two points in the plane (x1,y1) and (x2, y2)
+     * The angle is measured with 0/360 being the X-axis to the right, angles
+     * increase counter clockwise.
+     *
+     * @param x1 the x position of the first point
+     * @param y1 the y position of the first point
+     * @param x2 the x position of the second point
+     * @param y2 the y position of the second point
+     * @return the angle between two points
+     */
+    public double getAngle(float x1, float y1, float x2, float y2) {
+//        double rad = Math.atan2(y2 - y1, x2 - x1) + Math.PI;
+//        return (rad * 180 / Math.PI + 180) % 360;
+        float angle = (float) Math.toDegrees(Math.atan2(y2 - y1, x2 - x1));
+        if (angle < 0) {
+            angle += 360;
+        }
+
+        return angle;
+    }
+
+
+    public enum Direction {
+        up,
+        down,
+        left,
+        right;
+
+        /**
+         * Returns a direction given an angle.
+         * Directions are defined as follows:
+         * <p>
+         * Up: [45, 135]
+         * Right: [0,45] and [315, 360]
+         * Down: [225, 315]
+         * Left: [135, 225]
+         *
+         * @param angle an angle from 0 to 360 - e
+         * @return the direction of an angle
+         */
+        public static Direction fromAngle(double angle) {
+            if (inRange(angle, 45, 135)) {
+                return Direction.up;
+            } else if (inRange(angle, 0, 45) || inRange(angle, 315, 360)) {
+                return Direction.right;
+            } else if (inRange(angle, 225, 315)) {
+                return Direction.down;
+            } else {
+                return Direction.left;
+            }
+
+        }
+
+        /**
+         * @param angle an angle
+         * @param init  the initial bound
+         * @param end   the final bound
+         * @return returns true if the given angle is in the interval [init, end).
+         */
+        private static boolean inRange(double angle, float init, float end) {
+            return (angle >= init) && (angle < end);
+        }
     }
 
     private boolean isValidIndex(int pointerCount, int pointerIndexMove) {
@@ -370,7 +514,7 @@ class FlingCardListener implements View.OnTouchListener {
         }
     }
 
-    private float getScrollProgressPercent() {
+    private float getScrollProgressPercentX() {
         if (movedBeyondLeftBorder()) {
             return -1f;
         } else if (movedBeyondRightBorder()) {
@@ -381,18 +525,42 @@ class FlingCardListener implements View.OnTouchListener {
         }
     }
 
-    private boolean resetCardViewOnStack() {
+
+    private float getScrollProgressPercentY() {
+        if (movedBeyondTopBorder()) {
+            return -1f;
+        } else if (movedBeyondBottomBorder()) {
+            return 1f;
+        } else {
+            float zeroToOneValue = (aPosY + halfHeight - topBorder()) / (bottomBorder() - topBorder());
+            return zeroToOneValue * 2f - 1f;
+        }
+    }
+
+    private boolean resetCardViewOnStackOrRemoveIt() {
         if (movedBeyondLeftBorder()) {
             // Left Swipe
             onSelected(true, getExitPoint(-objectW), 100);
             if (mFlingListener != null) {
-                mFlingListener.onScroll(-1.0f);
+                mFlingListener.onScroll(getScrollProgressPercentX(), getScrollProgressPercentY());
             }
         } else if (movedBeyondRightBorder()) {
             // Right Swipe
             onSelected(false, getExitPoint(parentWidth), 100);
             if (mFlingListener != null) {
-                mFlingListener.onScroll(1.0f);
+                mFlingListener.onScroll(getScrollProgressPercentX(), getScrollProgressPercentY());
+            }
+        } else if (movedBeyondTopBorder()) {
+            //top swipe
+            selectTop();
+            if (mFlingListener != null) {
+                mFlingListener.onScroll(getScrollProgressPercentX(), getScrollProgressPercentY());
+            }
+        } else if (movedBeyondBottomBorder()) {
+            //bottom swipe
+            selectBottom();
+            if (mFlingListener != null) {
+                mFlingListener.onScroll(getScrollProgressPercentX(), getScrollProgressPercentY());
             }
         } else {
             float abslMoveDistance = Math.abs(aPosX - objectX);
@@ -407,13 +575,12 @@ class FlingCardListener implements View.OnTouchListener {
                     .y(objectY)
                     .scaleXBy(0)
                     .scaleYBy(0)
-                    .rotation(0);
+                    .rotation(0)
+                    .start();
             if (mFlingListener != null) {
-                mFlingListener.onScroll(0.0f);
+                mFlingListener.onScroll(0.0f, 0.0f);
             }
-            if (abslMoveDistance < 4.0) {
-//                mFlingListener.onClick(dataObject);
-            }
+
         }
         return false;
     }
@@ -490,6 +657,44 @@ class FlingCardListener implements View.OnTouchListener {
                 });
     }
 
+    private void onSelectedY(final boolean isTop,
+                             float exitX, long duration) {
+
+        isAnimationRunning = true;
+        float exitY;
+        if (isTop) {
+            exitY = -objectH - getRotationWidthOffset();
+        } else {
+            exitY = parentHeight + getRotationWidthOffset();
+        }
+
+        animator = this.frame.animate()
+                .setDuration(duration)
+                .setInterpolator(new AccelerateInterpolator())
+                .x(exitX)
+                .y(exitY)
+                .rotation(0)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        if (mFlingListener != null) {
+                            mFlingListener.onCardExited(frame, objectX, objectY);
+                        }
+                        if (isTop) {
+                            if (mFlingListener != null) {
+                                mFlingListener.topExit(dataObject);
+                            }
+                        } else {
+                            if (mFlingListener != null) {
+                                mFlingListener.bottomExit(dataObject);
+                            }
+                        }
+                        isAnimationRunning = false;
+                        animator = null;
+                    }
+                });
+    }
+
 
     /**
      * Starts a default left exit animation.
@@ -506,6 +711,22 @@ class FlingCardListener implements View.OnTouchListener {
     public void selectRightTop() {
         if (!isAnimationRunning)
             onSelected(false, (float) (objectY - frame.getHeight() * 1.5), 250);
+    }
+
+    /**
+     * Starts a default top exit animation.
+     */
+    public void selectTop() {
+        if (!isAnimationRunning)
+            onSelectedY(true, (float) objectX, 100);
+    }
+
+    /**
+     * Starts a default bottom exit animation.
+     */
+    public void selectBottom() {
+        if (!isAnimationRunning)
+            onSelectedY(false, (float) objectX, 100);
     }
 
     /**
@@ -599,7 +820,6 @@ class FlingCardListener implements View.OnTouchListener {
         return rotation;
     }
 
-
     /**
      * When the object rotates it's width becomes bigger.
      * The maximum width is at 45 degrees.
@@ -623,17 +843,5 @@ class FlingCardListener implements View.OnTouchListener {
         return new PointF(this.aPosX, this.aPosY);
     }
 
-    public interface FlingListener {
-        void onCardExited(View view, float objectX, float objectY);
-
-        void leftExit(Object dataObject);
-
-        void rightExit(Object dataObject);
-
-        void onClick(Object dataObject, int direction);
-
-        void onScroll(float scrollProgressPercent);
-
-    }
 
 }

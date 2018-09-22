@@ -22,6 +22,7 @@ class SwipeableAdapterImplementation(val context: Context, val frameLayout: Fram
 
     init {
         setupAdapter()
+
     }
 
     override fun onBindView(viewHolder: MyViewHolder, position: Int) {

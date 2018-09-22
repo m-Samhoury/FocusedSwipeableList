@@ -10,6 +10,8 @@ import android.widget.FrameLayout
 import androidx.collection.SparseArrayCompat
 import androidx.core.util.Pools
 import androidx.core.view.ViewCompat
+import com.focusedswipeablelistitem.api.ClickListener
+import com.focusedswipeablelistitem.api.FlingListener
 import com.focusedswipeablelistitem.dip
 
 /**
@@ -27,13 +29,18 @@ abstract class SwipeableAdapter<T : SwipeableAdapter.ViewHolder>(private val con
     private lateinit var recycledViewsPool: RecycledViewsPool<T>
     private lateinit var recyclerViewPool: Pools.SimplePool<T>
 
-    private val flingListener: FlingCardListener.FlingListener? = null
+    var flingListener: FlingListener? = null
+    var clickListener: ClickListener? = null
 
-
-    private var mainFlingListener = object : FlingCardListener.FlingListener {
-        override fun onClick(dataObject: Any?, direction: Int) {
-            flingListener?.onClick(dataObject, direction)
+    private var mainFlingListener = object : FlingListener {
+        override fun bottomExit(dataObject: Any?) {
+            flingListener?.bottomExit(dataObject)
         }
+
+        override fun topExit(dataObject: Any?) {
+            flingListener?.topExit(dataObject)
+        }
+
 
         override fun onCardExited(view: View, objectX: Float, objectY: Float) {
             if (currentPosition < -1) {
@@ -92,10 +99,12 @@ abstract class SwipeableAdapter<T : SwipeableAdapter.ViewHolder>(private val con
         }
 
 
-        override fun onScroll(scrollProgressPercent: Float) {
-            flingListener?.onScroll(scrollProgressPercent)
+        override fun onScroll(scrollProgressPercentX: Float, scrollProgressPercentY: Float) {
+            flingListener?.onScroll(scrollProgressPercentX, scrollProgressPercentY)
         }
     }
+    private val mainClickListener =
+            ClickListener { dataObject, direction -> clickListener?.onClick(dataObject, direction) }
 
     /**
      * Make sure that the top most view only gets the touch listener
@@ -195,7 +204,7 @@ abstract class SwipeableAdapter<T : SwipeableAdapter.ViewHolder>(private val con
         touchableView.post {
             val flingCardListener = FlingCardListener(touchableView,
                     touchableView,
-                    initialRotation, mainFlingListener
+                    initialRotation, mainFlingListener, mainClickListener
             )
             touchableView.setOnTouchListener(flingCardListener)
         }
@@ -211,7 +220,7 @@ abstract class SwipeableAdapter<T : SwipeableAdapter.ViewHolder>(private val con
 
         val flingCardListener = FlingCardListener(touchableView,
                 touchableView,
-                initialRotation, mainFlingListener
+                initialRotation, mainFlingListener, mainClickListener
         )
         touchableView.setOnTouchListener(flingCardListener)
     }
