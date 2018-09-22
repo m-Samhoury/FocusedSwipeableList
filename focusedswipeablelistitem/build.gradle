@@ -40,3 +40,11 @@ repositories {
 
 
 apply plugin: "com.vanniktech.maven.publish"
+
+
+mavenPublish {
+    releaseRepositoryUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+    snapshotRepositoryUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+    repositoryUsername = repositoryUsernameSona // This defaults to either the SONATYPE_NEXUS_USERNAME Gradle property or the system environment variable.
+    repositoryPassword = repositoryPasswordSona // This defaults to either the SONATYPE_NEXUS_PASSWORD Gradle property or the system environment variable.
+}
