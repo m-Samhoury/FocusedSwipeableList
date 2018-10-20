@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.github.dcendents.android-maven'
+group = 'com.github.m-Samhoury'
 
 android {
     compileSdkVersion 28
@@ -9,8 +11,8 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "0.2"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -46,12 +48,11 @@ repositories {
 }
 
 
-apply plugin: "com.vanniktech.maven.publish"
 
 
-mavenPublish {
-    releaseRepositoryUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-    snapshotRepositoryUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-    repositoryUsername = repositoryUsernameSona // This defaults to either the SONATYPE_NEXUS_USERNAME Gradle property or the system environment variable.
-    repositoryPassword = repositoryPasswordSona // This defaults to either the SONATYPE_NEXUS_PASSWORD Gradle property or the system environment variable.
-}
+//mavenPublish {
+//    releaseRepositoryUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+//    snapshotRepositoryUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+//    repositoryUsername = repositoryUsernameSona // This defaults to either the SONATYPE_NEXUS_USERNAME Gradle property or the system environment variable.
+//    repositoryPassword = repositoryPasswordSona // This defaults to either the SONATYPE_NEXUS_PASSWORD Gradle property or the system environment variable.
+//}
