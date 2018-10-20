@@ -16,7 +16,6 @@
         android:orientation="vertical"
         android:paddingBottom="8dp">
 
-
         <ImageView
             android:id="@+id/imageViewImage"
             android:layout_width="250dp"
@@ -29,8 +28,8 @@
 
         <TextView
             android:id="@+id/textViewDescription"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
@@ -41,6 +40,34 @@
             app:layout_constraintHorizontal_bias="0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/imageViewImage" />
+
+        <TextView
+            android:id="@+id/textViewNo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="32dp"
+            android:alpha="0"
+            android:rotation="315"
+            android:text="NO"
+            android:textColor="@color/colorAccent"
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="@id/imageViewImage"
+            app:layout_constraintTop_toTopOf="@id/imageViewImage" />
+
+        <TextView
+            android:id="@+id/textViewYes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="8dp"
+            android:alpha="0"
+            android:rotation="45"
+            android:text="YES"
+            android:textColor="@color/green"
+            android:textSize="20sp"
+            app:layout_constraintEnd_toEndOf="@id/imageViewImage"
+            app:layout_constraintTop_toTopOf="@id/imageViewImage" />
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,7 +29,7 @@ class SwipeableAdapterImplementation(val context: Context, val frameLayout: Fram
         viewHolder.itemView.textViewDescription.text = dataList[position]
     }
 
-    override fun getViewPoolSize(): Int = 2
+    override fun getViewPoolSize(): Int = if (3 > getItemCount()) getItemCount() else 3
 
 
     public class MyViewHolder(itemView: View) : SwipeableAdapter.ViewHolder(itemView) {
